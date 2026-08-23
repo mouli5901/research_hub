@@ -45,13 +45,13 @@ A version-control and collaboration platform built for research artifacts — do
 
 | Feature | Status |
 |---------|--------|
-| Markdown / plaintext file upload | ✅ |
-| ChatGPT JSON export parsing | ✅ |
-| Claude JSON/MD export parsing | ✅ |
-| Text-extractable PDF ingestion | ✅ |
-| Paste raw content directly | ✅ |
-| Auto-create Artifact + initial Commit + Branch | ✅ |
-| Auto-chunk & embed on ingest | ✅ |
+| Markdown / plaintext file upload | YES |
+| ChatGPT JSON export parsing | YES |
+| Claude JSON/MD export parsing | YES |
+| Text-extractable PDF ingestion | YES |
+| Paste raw content directly | YES |
+| Auto-create Artifact + initial Commit + Branch | YES |
+| Auto-chunk & embed on ingest | YES |
 
 **Backend:** `server/src/services/ingestionService.js` — normalizes each format into clean markdown.  
 **API:** `POST /api/artifacts/ingest` (multipart file or JSON body).  
@@ -61,13 +61,13 @@ A version-control and collaboration platform built for research artifacts — do
 
 | Feature | Status |
 |---------|--------|
-| Commit DAG with parent pointers | ✅ |
-| Semantic sentence-level diff | ✅ |
-| Branch create / switch | ✅ |
-| 3-way merge with common ancestor detection | ✅ |
-| Conflict detection (both sides modify same sentence) | ✅ |
-| Conflict resolution (Keep Main / Keep Source / Manual) | ✅ |
-| Stale-version protection (HTTP 409) | ✅ |
+| Commit DAG with parent pointers | YES |
+| Semantic sentence-level diff | YES |
+| Branch create / switch | YES |
+| 3-way merge with common ancestor detection | YES |
+| Conflict detection (both sides modify same sentence) | YES |
+| Conflict resolution (Keep Main / Keep Source / Manual) | YES |
+| Stale-version protection (HTTP 409) | YES |
 
 **Diff:** `GET /api/artifacts/:id/diff` — sentence tokenization, Levenshtein similarity scoring, structured blocks (added/removed/modified/unchanged).  
 **Merge:** `server/src/services/mergeService.js` — walks `parentCommit` chain to find LCA, performs 3-way sentence merge.  
@@ -77,11 +77,11 @@ A version-control and collaboration platform built for research artifacts — do
 
 | Feature | Status |
 |---------|--------|
-| Socket.IO live presence (who is viewing/editing) | ✅ |
-| Mock user identities (no auth) | ✅ |
-| "Changes since I last looked" indicator banner | ✅ |
-| Stale-version conflict alert (prevent silent clobber) | ✅ |
-| Pull Latest Commit button | ✅ |
+| Socket.IO live presence (who is viewing/editing) | YES |
+| Mock user identities (no auth) | YES |
+| "Changes since I last looked" indicator banner | YES |
+| Stale-version conflict alert (prevent silent clobber) | YES |
+| Pull Latest Commit button | YES |
 
 **Socket:** `server/src/services/socketService.js` — rooms per `artifact:<id>`, broadcasts presence updates.  
 **API:** `GET /api/artifacts/:id/changes-since?lastSeenCommit=...&branch=...`  
@@ -91,12 +91,12 @@ A version-control and collaboration platform built for research artifacts — do
 
 | Feature | Status |
 |---------|--------|
-| Chunk documents into ~400-char segments | ✅ |
-| Generate embeddings (OpenAI or 128-dim fallback) | ✅ |
-| Hybrid vector + keyword search | ✅ |
-| Cross-artifact-type search results | ✅ |
-| Ask AI with version-aware RAG | ✅ |
-| Provenance citations (artifact name, type, commit hash) | ✅ |
+| Chunk documents into ~400-char segments | YES |
+| Generate embeddings (OpenAI or 128-dim fallback) | YES |
+| Hybrid vector + keyword search | YES |
+| Cross-artifact-type search results | YES |
+| Ask AI with version-aware RAG | YES |
+| Provenance citations (artifact name, type, commit hash) | YES |
 
 **Embedding:** `server/src/services/embeddingService.js` — configurable via `OPENAI_API_KEY` env var, falls back to deterministic 128-dim normalized vectors.  
 **Search:** `GET /api/artifacts/search?q=...&type=...`  
@@ -107,8 +107,7 @@ A version-control and collaboration platform built for research artifacts — do
 
 ## What Was Completed vs. Not
 
-### ✅ Completed
-- All 4 core pillars fully implemented end-to-end
+###  Completed
 - GitHub Primer dark theme UI across all components
 - 14/14 automated E2E audit tests passing
 - Sentence-level semantic diff (deterministic, no LLM)
@@ -118,7 +117,7 @@ A version-control and collaboration platform built for research artifacts — do
 - RAG-based Ask AI with provenance citations
 - Markdown, ChatGPT, Claude, and PDF ingestion
 
-### ⚠️ Limitations / Not Implemented
+###  Limitations / Not Implemented
 - No real authentication (mock users only)
 - No OCR for image-based PDFs
 - No CRDT / real-time collaborative editing
@@ -224,6 +223,4 @@ git-for-research/
 └── README.md
 ```
 
----
 
-**Team:** Mouli · Built at Screen Out Hackathon 2026
