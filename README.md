@@ -105,7 +105,6 @@ A version-control and collaboration platform built for research artifacts — do
 
 ---
 
-## What Was Completed vs. Not
 
 ###  Completed
 - GitHub Primer dark theme UI across all components
