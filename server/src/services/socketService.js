@@ -3,10 +3,20 @@ import { Server } from 'socket.io';
 // Map of artifactId -> Map of socketId -> { socketId, user, status, lastSeenCommitId }
 const roomUsers = new Map();
 
-export function setupSocketIO(server) {
+export function setupSocketIO(server, allowedOrigins) {
+  const corsOrigin = allowedOrigins || ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
   const io = new Server(server, {
+    // polling first (works on Vercel serverless), websocket second (local dev)
+    transports: ['polling', 'websocket'],
     cors: {
-      origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:5174', 'http://127.0.0.1:5174'],
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const allowed = corsOrigin.some((o) =>
+          typeof o === 'string' ? o === origin : o.test(origin)
+        );
+        callback(allowed ? null : new Error('Socket.IO CORS blocked'), allowed);
+      },
       credentials: true
     }
   });
