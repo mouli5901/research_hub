@@ -164,33 +164,6 @@ npm run dev
 # → Running on http://localhost:5173
 ```
 
----
-
-## 5-Minute Demo Script
-
-### 1. Ingest ≥ 2 Artifact Types (1 min)
-1. Click **Import Artifact** in sidebar
-2. Select **Markdown / Text** → paste or upload a `.md` file → click **Ingest Artifact**
-3. Click **Import Artifact** again → select **ChatGPT / Claude Export** → upload a JSON export → **Ingest**
-4. (Optional) Import a PDF research paper
-
-### 2. Branch, Edit & Merge Conflict Scenario (2 min)
-1. Select the Markdown artifact → switch to **Edit** mode → make changes → **Commit Changes** on `main`
-2. Open **Branch Selector** → create branch `experiment`
-3. Edit content on `experiment` → commit
-4. Switch back to `main` → edit the same paragraph differently → commit
-5. Click **Merge & Conflicts** tab → select base: `main`, compare: `experiment` → **Evaluate Merge**
-6. See the conflict → resolve with **Keep Main**, **Keep Experiment**, or **Manual** resolution
-
-### 3. Semantic Diff (30 sec)
-1. Click **Semantic Diff** tab
-2. Select two commits → see green additions, red deletions, and similarity score
-
-### 4. Query Across Corpus (1.5 min)
-1. Click **Corpus Search** → type a query → see results across Markdown, Chat, and PDF artifacts
-2. Click **Ask AI** → ask a question → see the grounded answer with provenance citations linking back to specific artifacts and commit hashes
-
----
 
 ## What We'd Build Next
 
