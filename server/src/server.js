@@ -32,17 +32,26 @@ app.set('io', io);
 // CORS configuration
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow non-browser requests
-    if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') return callback(null, true);
-    const allowed = allowedOrigins.some((o) =>
-      typeof o === 'string' ? o === origin : o.test(origin)
-    );
-    callback(null, allowed ? true : true); // allow requests in production unless strictly disallowed
+    if (!origin) return callback(null, true);
+    callback(null, true);
   },
   credentials: true
 }));
 
 app.use(express.json());
+
+// Database connection middleware for all API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("DB Connection Middleware Error:", err.message);
+    res.status(500).json({ 
+      error: `Database connection failed: ${err.message}. Please verify MONGODB_URI in your Vercel project environment variables and ensure MongoDB Atlas Network Access is set to 0.0.0.0/0 (Allow access from anywhere).` 
+    });
+  }
+});
 
 // API Routes
 app.use('/api/artifacts', artifactRoutes);
@@ -54,26 +63,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// Connect DB once and export for Vercel serverless
-let dbConnected = false;
-const ensureDB = async () => {
-  if (!dbConnected) {
-    await connectDB();
-    dbConnected = true;
-  }
-};
-
-// Local dev vs Vercel serverless
+// Local dev server listener
 if (!process.env.VERCEL) {
   server.listen(PORT, () => {
     console.log(`Server & Socket.IO running on http://localhost:${PORT}`);
   });
-  connectDB().catch((err) => {
-    console.error("MongoDB initial connection error:", err);
-  });
-} else {
-  // Vercel serverless: ensure DB is ready on first invocation
-  ensureDB();
 }
 
 export default server;

@@ -68,7 +68,36 @@ export const createArtifact = async (req, res) => {
 // GET /api/artifacts
 export const getArtifacts = async (req, res) => {
   try {
-    const artifacts = await Artifact.find().sort({ updatedAt: -1 });
+    let artifacts = await Artifact.find().sort({ updatedAt: -1 });
+    
+    // Auto-seed initial research artifact if database is empty
+    if (artifacts.length === 0) {
+      const artifact = await Artifact.create({
+        name: 'DeepSeek_R1_Architectural_Synthesis.md',
+        type: 'markdown',
+        description: 'Research synthesis on reasoning models and semantic retrieval strategies.',
+        defaultBranch: 'main'
+      });
+
+      const commit = await Commit.create({
+        artifactId: artifact._id,
+        content: `# DeepSeek-R1 Architecture & Semantic Retrieval Benchmark\n\n## 1. Abstract\nThis document outlines our research on low-cost reasoning models and semantic retrieval strategies for scientific corpora.\n\n## 2. Research Hypothesis & Problem Statement\nThe system uses keyword-based retrieval.\n\n## 3. Empirical Evaluation & Accuracy Metrics\n- Baseline Accuracy: 74% precision using TF-IDF\n- Experimental Accuracy: The model achieved 82% accuracy.`,
+        parentCommit: null,
+        branch: 'main',
+        message: 'Initial research import',
+        author: 'Mouli',
+        timestamp: new Date()
+      });
+
+      await Branch.create({
+        artifactId: artifact._id,
+        name: 'main',
+        headCommit: commit._id
+      });
+
+      artifacts = [artifact];
+    }
+
     return res.json(artifacts);
   } catch (error) {
     console.error('Error fetching artifacts:', error);
