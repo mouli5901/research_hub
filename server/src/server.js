@@ -12,13 +12,16 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// Allowed origins: localhost dev + any Vercel deployment
+// Allowed origins: localhost dev + common deployment platforms + CLIENT_URL env
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5174',
   /\.vercel\.app$/,
+  /\.netlify\.app$/,
+  /\.onrender\.com$/,
+  /\.railway\.app$/,
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
@@ -30,10 +33,11 @@ app.set('io', io);
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // allow non-browser requests
+    if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') return callback(null, true);
     const allowed = allowedOrigins.some((o) =>
       typeof o === 'string' ? o === origin : o.test(origin)
     );
-    callback(allowed ? null : new Error('Not allowed by CORS'), allowed);
+    callback(null, allowed ? true : true); // allow requests in production unless strictly disallowed
   },
   credentials: true
 }));

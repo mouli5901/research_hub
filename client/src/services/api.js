@@ -1,4 +1,16 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  // In production builds (e.g. Vercel serverless / same-origin host), default to relative URL
+  if (import.meta.env.PROD) {
+    return '';
+  }
+  // Local development fallback
+  return 'http://127.0.0.1:5000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchArtifacts() {
   const response = await fetch(`${API_BASE_URL}/api/artifacts`);

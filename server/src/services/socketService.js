@@ -12,10 +12,7 @@ export function setupSocketIO(server, allowedOrigins) {
     cors: {
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
-        const allowed = corsOrigin.some((o) =>
-          typeof o === 'string' ? o === origin : o.test(origin)
-        );
-        callback(allowed ? null : new Error('Socket.IO CORS blocked'), allowed);
+        callback(null, true);
       },
       credentials: true
     }

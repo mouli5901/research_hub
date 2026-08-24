@@ -1,6 +1,16 @@
 import { io } from 'socket.io-client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.PROD) {
+    return ''; // empty string connects socket.io to current window host origin
+  }
+  return 'http://127.0.0.1:5000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 let socket = null;
 

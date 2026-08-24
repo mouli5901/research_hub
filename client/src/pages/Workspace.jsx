@@ -110,7 +110,7 @@ export default function Workspace() {
       }
     } catch (err) {
       console.error('Error loading artifacts from API:', err);
-      setErrorMessage(`API Connection Error: Could not reach backend at ${import.meta.env.VITE_API_URL || 'http://localhost:5000'}`);
+      setErrorMessage(`API Connection Error: Could not reach backend (${err.message})`);
     } finally {
       setIsLoadingArtifacts(false);
     }
