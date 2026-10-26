@@ -1,5 +1,6 @@
 import Chunk from '../models/Chunk.js';
 import { generateEmbedding, cosineSimilarity } from './embeddingService.js';
+import { GoogleGenAI } from '@google/genai';
 
 /**
  * Retrieves top relevant context chunks for a question.
@@ -74,30 +75,19 @@ export async function answerQuestionFromCorpus(question) {
   if (geminiKey) {
     try {
       const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
       
-      const payload = {
-        contents: [{
-          parts: [{
-            text: `System: You are ResearchHub AI. Answer the question strictly using ONLY the provided research context. If the context does not contain enough information, state: "Based on the available research history, there is insufficient context to answer this question." Do not invent facts.\n\n` +
-                  `CONTEXT:\n${contextText}\n\n` +
-                  `QUESTION: ${question}`
-          }]
-        }]
-      };
+      const prompt = `System: You are ResearchHub AI. Answer the question strictly using ONLY the provided research context. If the context does not contain enough information, state: "Based on the available research history, there is insufficient context to answer this question." Do not invent facts.\n\n` +
+                     `CONTEXT:\n${contextText}\n\n` +
+                     `QUESTION: ${question}`;
 
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text) {
-          answerText = text.trim();
-        }
+      if (response && response.text) {
+        answerText = response.text.trim();
       }
     } catch (err) {
       console.warn('Gemini API call failed, falling back:', err.message);
