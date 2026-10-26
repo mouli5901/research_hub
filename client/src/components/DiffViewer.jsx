@@ -58,13 +58,13 @@ export default function DiffViewer({
           {/* Base Commit Dropdown */}
           <select
             className="input-field"
-            value={baseCommitId}
+            value={baseCommitId || ""}
             onChange={(e) => onSelectBaseCommit(e.target.value)}
             style={{ width: 'auto', fontSize: '12px' }}
           >
             {commits.map(c => (
-              <option key={c._id} value={c._id}>
-                base: {c._id.toString().substring(c._id.toString().length - 7)} — {c.message}
+              <option key={c._id || c.id} value={c._id || c.id}>
+                base: {(c._id || c.id).toString().substring((c._id || c.id).toString().length - 7)} — {c.message}
               </option>
             ))}
           </select>
@@ -74,13 +74,13 @@ export default function DiffViewer({
           {/* Compare Commit Dropdown */}
           <select
             className="input-field"
-            value={compareCommitId}
+            value={compareCommitId || ""}
             onChange={(e) => onSelectCompareCommit(e.target.value)}
             style={{ width: 'auto', fontSize: '12px' }}
           >
             {commits.map(c => (
-              <option key={c._id} value={c._id}>
-                compare: {c._id.toString().substring(c._id.toString().length - 7)} — {c.message}
+              <option key={c._id || c.id} value={c._id || c.id}>
+                compare: {(c._id || c.id).toString().substring((c._id || c.id).toString().length - 7)} — {c.message}
               </option>
             ))}
           </select>
@@ -123,7 +123,7 @@ export default function DiffViewer({
                   return (
                     <tr key={idx} className="blob-code-addition">
                       <td style={{ width: '40px', padding: '4px 8px', color: 'var(--color-fg-subtle)', textAlign: 'right', borderRight: '1px solid var(--color-border-default)', userSelect: 'none' }}>+</td>
-                      <td style={{ padding: '4px 12px', whiteSpace: 'pre-wrap' }}>{block.text}</td>
+                      <td style={{ padding: '4px 12px', whiteSpace: 'pre-wrap' }}>{block.content}</td>
                     </tr>
                   );
                 }
@@ -131,14 +131,14 @@ export default function DiffViewer({
                   return (
                     <tr key={idx} className="blob-code-deletion">
                       <td style={{ width: '40px', padding: '4px 8px', color: 'var(--color-fg-subtle)', textAlign: 'right', borderRight: '1px solid var(--color-border-default)', userSelect: 'none' }}>-</td>
-                      <td style={{ padding: '4px 12px', whiteSpace: 'pre-wrap' }}>{block.text}</td>
+                      <td style={{ padding: '4px 12px', whiteSpace: 'pre-wrap' }}>{block.content}</td>
                     </tr>
                   );
                 }
                 return (
                   <tr key={idx}>
                     <td style={{ width: '40px', padding: '4px 8px', color: 'var(--color-fg-subtle)', textAlign: 'right', borderRight: '1px solid var(--color-border-default)', userSelect: 'none' }}> </td>
-                    <td style={{ padding: '4px 12px', color: 'var(--color-fg-muted)', whiteSpace: 'pre-wrap' }}>{block.text}</td>
+                    <td style={{ padding: '4px 12px', color: 'var(--color-fg-muted)', whiteSpace: 'pre-wrap' }}>{block.content}</td>
                   </tr>
                 );
               })}
