@@ -18,7 +18,13 @@ export function getSocket() {
   if (!socket) {
     socket = io(API_BASE_URL, {
       autoConnect: true,
-      withCredentials: true
+      withCredentials: true,
+      reconnectionAttempts: 3,
+      timeout: 5000,
+      transports: ['polling', 'websocket']
+    });
+    socket.on('connect_error', (err) => {
+      console.warn('Real-time socket presence offline:', err.message);
     });
   }
   return socket;

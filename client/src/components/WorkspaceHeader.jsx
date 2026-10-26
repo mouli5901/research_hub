@@ -28,7 +28,8 @@ export default function WorkspaceHeader({
   onOpenImportModal,
   onOpenSearchModal,
   onOpenAskAIModal,
-  activeUsers
+  activeUsers,
+  isOfflineMode = false
 }) {
   const artifactName = activeArtifact ? activeArtifact.name : 'Select Artifact';
 
@@ -42,6 +43,9 @@ export default function WorkspaceHeader({
           <span style={{ color: 'var(--color-fg-muted)' }}>/</span>
           <span>{artifactName}</span>
           <span className="repo-badge">Public</span>
+          <span className="repo-badge" style={isOfflineMode ? { backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#93c5fd', borderColor: 'rgba(59, 130, 246, 0.3)' } : { backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#6ee7b7', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+            {isOfflineMode ? 'Local Workspace' : '● Live Cloud'}
+          </span>
         </div>
 
         {/* Toolbar Buttons */}

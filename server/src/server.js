@@ -41,27 +41,34 @@ app.use(cors({
 app.use(express.json());
 
 // Database connection middleware for all API requests
-app.use('/api', async (req, res, next) => {
+const dbMiddleware = async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
     console.error("DB Connection Middleware Error:", err.message);
-    res.status(500).json({ 
+    res.status(503).json({ 
       error: `Database connection failed: ${err.message}. Please verify MONGODB_URI in your Vercel project environment variables and ensure MongoDB Atlas Network Access is set to 0.0.0.0/0 (Allow access from anywhere).` 
     });
   }
-});
+};
 
-// API Routes
+app.use('/api', dbMiddleware);
+app.use('/artifacts', dbMiddleware);
+
+// API Routes (supports both /api/artifacts and /artifacts when rewritten by Vercel)
 app.use('/api/artifacts', artifactRoutes);
+app.use('/artifacts', artifactRoutes);
 
-app.get('/', (req, res) => {
+const healthHandler = (req, res) => {
   res.json({
     status: 'ok',
     message: 'Git for Research Versioning & Real-time Presence Server Running'
   });
-});
+};
+
+app.get('/', healthHandler);
+app.get('/api', healthHandler);
 
 // Local dev server listener
 if (!process.env.VERCEL) {
@@ -70,4 +77,6 @@ if (!process.env.VERCEL) {
   });
 }
 
-export default server;
+export { app, server };
+export default app;
+

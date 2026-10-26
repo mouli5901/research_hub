@@ -15,7 +15,12 @@ const API_BASE_URL = getApiBaseUrl();
 export async function fetchArtifacts() {
   const response = await fetch(`${API_BASE_URL}/api/artifacts`);
   if (!response.ok) {
-    throw new Error(`Failed to fetch artifacts: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Failed to fetch artifacts: ${response.statusText}`);
+  }
+  const contentType = response.headers.get('content-type');
+  if (contentType && !contentType.includes('application/json')) {
+    throw new Error('Server returned non-JSON response');
   }
   return response.json();
 }
