@@ -17,6 +17,10 @@ const branchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, 
       ref: 'Commit', 
       required: true 
+    },
+    createdBy: {
+      type: String,
+      default: ''
     }
   },
   { timestamps: true }

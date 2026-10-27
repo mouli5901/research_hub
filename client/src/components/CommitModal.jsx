@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { X, GitCommit, GitBranch, CheckCircle2 } from 'lucide-react';
 
-export default function CommitModal({ isOpen, onClose, currentBranch, activeArtifact, onCreateCommit }) {
+export default function CommitModal({ isOpen, onClose, currentBranch, activeArtifact, onCreateCommit, currentUser }) {
   const [message, setMessage] = useState('');
-  const [author, setAuthor] = useState('Mouli');
+  const [author, setAuthor] = useState(currentUser?.name || 'Researcher');
+
+  React.useEffect(() => {
+    if (currentUser?.name) setAuthor(currentUser.name);
+  }, [currentUser, isOpen]);
 
   if (!isOpen) return null;
 
@@ -13,7 +17,8 @@ export default function CommitModal({ isOpen, onClose, currentBranch, activeArti
       onCreateCommit({
         message: message.trim(),
         branch: currentBranch,
-        author: author.trim()
+        author: author.trim(),
+        userId: currentUser?.id || ''
       });
       setMessage('');
       onClose();

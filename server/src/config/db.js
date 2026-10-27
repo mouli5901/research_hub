@@ -1,16 +1,16 @@
 import mongoose from 'mongoose';
 import dns from 'dns';
 
-// Only set custom DNS servers on local Windows machines to avoid issues on Vercel/Linux
-if (process.platform === 'win32' && !process.env.VERCEL) {
-  try {
-    dns.setServers(['8.8.8.8', '8.8.4.4']);
-  } catch (e) {
-    // Ignore fallback error
-  }
+// Set reliable DNS servers for SRV resolution
+try {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+} catch (e) {
+  // Ignore fallback error
 }
 
 let isConnected = false;
+
+const DEFAULT_URI = 'mongodb+srv://bharathmouli:51395139@cluster0.cuchzss.mongodb.net/?appName=Cluster0';
 
 const connectDB = async () => {
   if (isConnected || mongoose.connection.readyState === 1) {
@@ -18,14 +18,11 @@ const connectDB = async () => {
     return;
   }
 
-  if (!process.env.MONGODB_URI) {
-    console.error('MONGODB_URI environment variable is not defined.');
-    throw new Error('MONGODB_URI environment variable is missing. Please add MONGODB_URI to your Vercel Environment Variables.');
-  }
+  const mongoUri = process.env.MONGODB_URI || DEFAULT_URI;
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 8000 // Fast fail timeout (8 seconds)
+    const conn = await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 5000
     });
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);

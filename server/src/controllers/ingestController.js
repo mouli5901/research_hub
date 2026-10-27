@@ -15,12 +15,12 @@ export const uploadMiddleware = multer({
 export const ingestArtifact = async (req, res) => {
   try {
     const file = req.file;
-    const { name, type, content, branch, author } = req.body;
+    const { name, type, content, branch, author, userId } = req.body;
 
     const artifactName = name || file?.originalname || 'Ingested_Research_Document.md';
     const artifactType = type || 'markdown';
     const targetBranch = branch || 'main';
-    const authorName = author || 'Mouli';
+    const authorName = author || 'Anonymous';
 
     let fileBuffer = file ? file.buffer : null;
     let mimeType = file ? file.mimetype : 'text/plain';
@@ -42,7 +42,9 @@ export const ingestArtifact = async (req, res) => {
       name: artifactName,
       type: parsed.detectedType || artifactType,
       defaultBranch: targetBranch,
-      description: `Ingested from ${file ? 'uploaded file (' + originalName + ')' : 'pasted text'}`
+      description: `Ingested from ${file ? 'uploaded file (' + originalName + ')' : 'pasted text'}`,
+      author: authorName,
+      userId: userId || ''
     });
 
     // 3. Create Initial Commit
@@ -53,6 +55,7 @@ export const ingestArtifact = async (req, res) => {
       branch: targetBranch,
       message: `Ingested artifact ${artifactName}`,
       author: authorName,
+      userId: userId || '',
       timestamp: new Date()
     });
 
@@ -60,7 +63,8 @@ export const ingestArtifact = async (req, res) => {
     const initialBranch = await Branch.create({
       artifactId: artifact._id,
       name: targetBranch,
-      headCommit: commit._id
+      headCommit: commit._id,
+      createdBy: authorName
     });
 
     // 5. Index chunks into vector search collection

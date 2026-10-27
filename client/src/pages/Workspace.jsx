@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { FileText, Upload, Plus } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import WorkspaceHeader from '../components/WorkspaceHeader';
 import ArtifactEditor from '../components/ArtifactEditor';
@@ -31,15 +32,13 @@ import {
   subscribeToNewCommits
 } from '../services/socket';
 
+import { getCurrentUser, saveCurrentUser } from '../services/userService';
+
 import { 
-  MOCK_USERS, 
   MOCK_CONFLICT_DATA,
-  MOCK_SEARCH_RESULTS,
-  MOCK_ARTIFACTS,
-  MOCK_BRANCHES,
-  MOCK_COMMITS,
-  MOCK_DIFF_DATA
+  MOCK_SEARCH_RESULTS 
 } from '../data/mockData';
+
 
 export default function Workspace() {
   // Navigation & View States
@@ -86,46 +85,36 @@ export default function Workspace() {
   const [isCommitModalOpen, setIsCommitModalOpen] = useState(false);
   const [isAskAIModalOpen, setIsAskAIModalOpen] = useState(false);
 
-  const currentUser = MOCK_USERS.find(u => u.isCurrentUser) || MOCK_USERS[0];
-  const activeArtifact = artifacts.find(a => (a._id || a.id) === activeArtifactId) || artifacts[0];
+  const [currentUser, setCurrentUser] = useState(() => getCurrentUser());
+  const activeArtifact = artifacts.find(a => (a._id || a.id) === activeArtifactId) || (artifacts.length > 0 ? artifacts[0] : null);
+
+  const handleUpdateUser = (newUser) => {
+    saveCurrentUser(newUser);
+    setCurrentUser(newUser);
+  };
 
   // 1. Load Artifacts on Mount
   const loadArtifacts = useCallback(async () => {
     setIsLoadingArtifacts(true);
     setErrorMessage(null);
     try {
-      let data = await fetchArtifacts();
-      
-      // Seed default artifact if DB is empty for demo convenience
-      if (!data || data.length === 0) {
-        try {
-          const seeded = await createArtifactAPI({
-            name: 'DeepSeek_R1_Architectural_Synthesis.md',
-            type: 'markdown',
-            content: `# DeepSeek-R1 Architecture & Semantic Retrieval Benchmark\n\n## 1. Abstract\nThis document outlines our research on low-cost reasoning models and semantic retrieval strategies for scientific corpora.\n\n## 2. Research Hypothesis & Problem Statement\nThe system uses keyword-based retrieval.\n\n## 3. Empirical Evaluation & Accuracy Metrics\n- Baseline Accuracy: 74% precision using TF-IDF\n- Experimental Accuracy: The model achieved 82% accuracy.`,
-            message: 'Initial research import',
-            author: 'Mouli',
-            branch: 'main'
-          });
-          data = [seeded.artifact];
-        } catch (seedErr) {
-          data = MOCK_ARTIFACTS;
-          setIsOfflineMode(true);
-        }
-      }
-
-      setArtifacts(data);
+      const data = await fetchArtifacts();
+      const list = Array.isArray(data) ? data : [];
+      setArtifacts(list);
       setIsOfflineMode(false);
-      if (data.length > 0 && !activeArtifactId) {
-        setActiveArtifactId(data[0]._id || data[0].id);
+      if (list.length > 0) {
+        if (!activeArtifactId || !list.some(a => (a._id || a.id) === activeArtifactId)) {
+          setActiveArtifactId(list[0]._id || list[0].id);
+        }
+      } else {
+        setActiveArtifactId(null);
       }
     } catch (err) {
-      console.warn('API unavailable in production, falling back to local workspace data:', err);
-      setArtifacts(MOCK_ARTIFACTS);
+      console.warn('API error fetching artifacts:', err);
+      setArtifacts([]);
+      setActiveArtifactId(null);
       setIsOfflineMode(true);
-      if (!activeArtifactId && MOCK_ARTIFACTS.length > 0) {
-        setActiveArtifactId(MOCK_ARTIFACTS[0].id);
-      }
+      setErrorMessage('Could not connect to database. Please check your connection.');
     } finally {
       setIsLoadingArtifacts(false);
     }
@@ -137,7 +126,13 @@ export default function Workspace() {
 
   // 2. Load Branches and Commits whenever activeArtifactId or currentBranch changes
   const loadArtifactData = useCallback(async () => {
-    if (!activeArtifactId) return;
+    if (!activeArtifactId) {
+      setBranches([]);
+      setCommits([]);
+      setActiveCommit(null);
+      setDraftContent('');
+      return;
+    }
 
     setIsLoadingCommits(true);
     try {
@@ -146,18 +141,18 @@ export default function Workspace() {
       try {
         branchList = await fetchBranches(activeArtifactId);
       } catch (err) {
-        branchList = MOCK_BRANCHES;
+        console.warn('Error fetching branches:', err);
       }
       if (!branchList || branchList.length === 0) {
-        branchList = MOCK_BRANCHES;
+        branchList = [{ id: 'main', name: 'main', description: 'Primary branch' }];
       }
       setBranches(branchList);
 
-      // Verify currentBranch exists in branchList, else fallback to 'main'
+      // Verify currentBranch exists in branchList, else fallback to first branch or 'main'
       const branchNames = branchList.map(b => b.name);
       let selectedBranchName = currentBranch;
-      if (branchList.length > 0 && !branchNames.includes(currentBranch)) {
-        selectedBranchName = branchList[0].name || 'main';
+      if (!branchNames.includes(currentBranch)) {
+        selectedBranchName = branchNames[0] || 'main';
         setCurrentBranch(selectedBranchName);
       }
 
@@ -166,21 +161,15 @@ export default function Workspace() {
       try {
         commitList = await fetchCommits(activeArtifactId, selectedBranchName);
       } catch (err) {
-        const curArt = artifacts.find(a => (a._id || a.id) === activeArtifactId);
-        commitList = MOCK_COMMITS.filter(c => !curArt || c.artifactName === curArt.name || c.branch === selectedBranchName);
-        if (commitList.length === 0) commitList = MOCK_COMMITS;
+        console.warn('Error fetching commits:', err);
       }
-      if (!commitList || commitList.length === 0) {
-        commitList = MOCK_COMMITS;
-      }
-      setCommits(commitList);
+      setCommits(commitList || []);
 
-      if (commitList.length > 0) {
+      if (commitList && commitList.length > 0) {
         const headC = commitList[0];
         setActiveCommit(headC);
         setDraftContent(headC.content || activeArtifact?.content || '');
 
-        // Set lastSeenCommitId if not set
         if (!lastSeenCommitId) {
           setLastSeenCommitId(headC._id || headC.id);
         }
@@ -193,7 +182,7 @@ export default function Workspace() {
     } finally {
       setIsLoadingCommits(false);
     }
-  }, [activeArtifactId, currentBranch, lastSeenCommitId, artifacts, activeArtifact]);
+  }, [activeArtifactId, currentBranch, lastSeenCommitId, activeArtifact]);
 
   useEffect(() => {
     if (activeArtifactId) {
@@ -315,12 +304,14 @@ export default function Workspace() {
     try {
       await createBranchAPI(activeArtifactId, {
         name: newBranchName,
-        fromBranch: currentBranch
+        fromBranch: currentBranch,
+        author: currentUser.name,
+        userId: currentUser.id
       });
       setCurrentBranch(newBranchName);
       await loadArtifactData();
     } catch (err) {
-      console.warn('API create branch unavailable, adding local branch:', err);
+      console.warn('API create branch error:', err);
       const newB = { id: newBranchName, name: newBranchName, description: 'User created branch' };
       setBranches(prev => [...prev, newB]);
       setCurrentBranch(newBranchName);
@@ -341,6 +332,7 @@ export default function Workspace() {
         message,
         branch: branch || currentBranch,
         author: author || currentUser.name,
+        userId: currentUser.id,
         expectedHeadCommit: activeCommit?._id || activeCommit?.id
       };
 
@@ -363,7 +355,7 @@ export default function Workspace() {
           details: err.details
         });
       } else {
-        console.warn('API commit error, adding local commit:', err);
+        console.warn('API commit error:', err);
         const newCommit = {
           id: 'c-' + Date.now().toString(16),
           _id: 'c-' + Date.now().toString(16),
@@ -414,7 +406,7 @@ export default function Workspace() {
         await loadArtifactData();
       }
     } catch (err) {
-      console.warn('Live merge check unavailable, using simulated conflict data:', err);
+      console.warn('Live merge check error:', err);
       setConflictData(MOCK_CONFLICT_DATA);
     } finally {
       setIsLoadingMerge(false);
@@ -430,7 +422,8 @@ export default function Workspace() {
         sourceBranch,
         resolvedContent,
         resolutionStrategy,
-        author: currentUser.name
+        author: currentUser.name,
+        userId: currentUser.id
       });
 
       if (res.status === 'MERGED') {
@@ -446,7 +439,7 @@ export default function Workspace() {
         await loadArtifactData();
       }
     } catch (err) {
-      console.warn('API resolve merge unavailable, saving locally:', err);
+      console.warn('API resolve merge error:', err);
       setConflictData({
         status: `RESOLVED_${(resolutionStrategy || 'manual').toUpperCase()}`,
         artifactName: activeArtifact?.name || 'Document',
@@ -463,30 +456,50 @@ export default function Workspace() {
 
   const handleImportArtifact = async (payload) => {
     try {
+      if (payload instanceof FormData) {
+        if (!payload.has('author')) payload.append('author', currentUser.name);
+        if (!payload.has('userId')) payload.append('userId', currentUser.id);
+      } else if (payload && typeof payload === 'object') {
+        payload.author = payload.author || currentUser.name;
+        payload.userId = payload.userId || currentUser.id;
+      }
+
       const res = await ingestArtifactAPI(payload);
       const newArt = res.artifact;
 
       const updatedArtifacts = await fetchArtifacts();
       setArtifacts(updatedArtifacts);
-      setActiveArtifactId(newArt._id || newArt.id);
+      if (newArt) {
+        setActiveArtifactId(newArt._id || newArt.id);
+      }
       setActiveView('editor');
     } catch (err) {
-      console.warn('API import failed, creating local simulated artifact:', err);
-      const isFormData = payload instanceof FormData;
-      const fileName = isFormData ? (payload.get('file')?.name || 'imported_paper.pdf') : (payload.name || 'imported_document.md');
-      const fileType = isFormData ? (fileName.endsWith('.pdf') ? 'pdf' : 'document') : (payload.type || 'markdown');
-      const newArt = {
-        id: 'art-' + Date.now().toString(16),
-        _id: 'art-' + Date.now().toString(16),
-        name: fileName,
-        type: fileType,
-        content: isFormData ? `# ${fileName}\n\n[Imported research document content]` : (payload.content || ''),
-        branch: currentBranch,
-        author: currentUser.name
-      };
-      setArtifacts(prev => [newArt, ...prev]);
-      setActiveArtifactId(newArt.id);
-      setActiveView('editor');
+      console.warn('API import failed:', err);
+      setErrorMessage('Failed to import document: ' + (err.message || 'Network/Server error'));
+    }
+  };
+
+  const handleCreateNewDocument = async () => {
+    try {
+      const docName = `Research_Notes_${new Date().toISOString().slice(0, 10)}.md`;
+      const res = await createArtifactAPI({
+        name: docName,
+        type: 'markdown',
+        content: `# New Research Artifact\n\nAuthor: ${currentUser.name}\nDate: ${new Date().toLocaleDateString()}\n\n## Abstract\nStart documenting your research methodology, empirical data, and synthesis here...`,
+        message: 'Initial research artifact creation',
+        author: currentUser.name,
+        userId: currentUser.id,
+        branch: 'main'
+      });
+      const newArt = res.artifact || res;
+      await loadArtifacts();
+      if (newArt) {
+        setActiveArtifactId(newArt._id || newArt.id);
+        setActiveView('editor');
+      }
+    } catch (err) {
+      console.error('Failed to create new document:', err);
+      setErrorMessage('Failed to create document: ' + (err.message || 'Server error'));
     }
   };
 
@@ -517,6 +530,8 @@ export default function Workspace() {
         onOpenSearchModal={() => setIsSearchModalOpen(true)}
         onOpenAskAIModal={() => setIsAskAIModalOpen(true)}
         currentUser={currentUser}
+        onUpdateUser={handleUpdateUser}
+        onCreateNewDocument={handleCreateNewDocument}
       />
 
       {/* 2. MAIN WORKSPACE */}
@@ -635,7 +650,7 @@ export default function Workspace() {
           onOpenImportModal={() => setIsImportModalOpen(true)}
           onOpenSearchModal={() => setIsSearchModalOpen(true)}
           onOpenAskAIModal={() => setIsAskAIModalOpen(true)}
-          activeUsers={roomUsers.length > 0 ? roomUsers : MOCK_USERS}
+          activeUsers={roomUsers.length > 0 ? roomUsers : [currentUser]}
           isOfflineMode={isOfflineMode}
         />
 
@@ -644,6 +659,24 @@ export default function Workspace() {
           {isLoadingArtifacts ? (
             <div className="editor-area" style={{ justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>
               Loading research artifacts from backend...
+            </div>
+          ) : artifacts.length === 0 ? (
+            <div className="editor-area" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center', gap: '16px' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '16px', backgroundColor: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#60a5fa', marginBottom: '4px' }}>
+                <FileText size={32} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#f8fafc' }}>No Research Artifacts Yet</h3>
+              <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', maxWidth: '440px', lineHeight: 1.6 }}>
+                Welcome, <strong>{currentUser.name}</strong>! Your repository is ready. Import an existing paper, PDF, or markdown file, or create a fresh document to begin versioning your research.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                <button className="btn btn-primary" onClick={() => setIsImportModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px' }}>
+                  <Upload size={16} /> Import Research File
+                </button>
+                <button className="btn btn-default" onClick={handleCreateNewDocument} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px' }}>
+                  <Plus size={16} /> Create Blank Document
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -706,6 +739,7 @@ export default function Workspace() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImportArtifact={handleImportArtifact}
+        currentUser={currentUser}
       />
 
       <SearchResults
@@ -721,11 +755,13 @@ export default function Workspace() {
         currentBranch={currentBranch}
         activeArtifact={activeArtifact}
         onCreateCommit={handleCreateCommit}
+        currentUser={currentUser}
       />
 
       <AskAIModal
         isOpen={isAskAIModalOpen}
         onClose={() => setIsAskAIModalOpen(false)}
+        artifacts={artifacts}
         onSelectArtifact={(name) => {
           const matched = artifacts.find(a => a.name === name);
           if (matched) setActiveArtifactId(matched._id || matched.id);

@@ -28,7 +28,11 @@ const commitSchema = new mongoose.Schema(
     },
     author: { 
       type: String, 
-      default: 'Mouli' 
+      default: 'Anonymous' 
+    },
+    userId: {
+      type: String,
+      default: ''
     },
     timestamp: { 
       type: Date, 

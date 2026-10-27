@@ -19,7 +19,18 @@ const artifactSchema = new mongoose.Schema(
     description: { 
       type: String, 
       default: '' 
-    }
+    },
+    author: {
+      type: String,
+      default: 'Anonymous'
+    },
+    userId: {
+      type: String,
+      default: ''
+    },
+    collaborators: [{
+      type: String
+    }]
   },
   { timestamps: true }
 );

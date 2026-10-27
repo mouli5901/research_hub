@@ -74,7 +74,7 @@ export async function answerQuestionFromCorpus(question) {
   // 1. Try Gemini API if key is present
   if (geminiKey) {
     try {
-      const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
+      const model = process.env.LLM_MODEL || 'gemini-3.8-flash';
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       
       const prompt = `System: You are ResearchHub AI. Answer the question strictly using ONLY the provided research context. If the context does not contain enough information, state: "Based on the available research history, there is insufficient context to answer this question." Do not invent facts.\n\n` +
@@ -90,7 +90,7 @@ export async function answerQuestionFromCorpus(question) {
         answerText = response.text.trim();
       }
     } catch (err) {
-      console.warn('Gemini API call failed, falling back:', err.message);
+      console.warn('Gemini API call returned warning, falling back to corpus synthesis:', err.message);
     }
   }
 

@@ -10,7 +10,8 @@ import {
   User,
   BookOpen,
   Layers,
-  Folder
+  Folder,
+  Plus
 } from 'lucide-react';
 
 export default function Sidebar({ 
@@ -24,7 +25,9 @@ export default function Sidebar({
   onOpenImportModal,
   onOpenSearchModal,
   onOpenAskAIModal,
-  currentUser
+  currentUser,
+  onUpdateUser,
+  onCreateNewDocument
 }) {
   const getArtifactIcon = (type) => {
     switch (type) {
@@ -88,27 +91,42 @@ export default function Sidebar({
       <div className="sidebar-section" style={{ flex: 1, overflowY: 'auto' }}>
         <div className="sidebar-section-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>Artifacts ({artifacts.length})</span>
-          <Folder size={13} />
+          {onCreateNewDocument && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCreateNewDocument(); }}
+              title="Create new document"
+              style={{ background: 'none', border: 'none', color: 'var(--color-fg-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+            >
+              <Plus size={14} />
+            </button>
+          )}
         </div>
 
-        {artifacts.map((art) => {
-          const artId = art._id || art.id;
-          const isActive = artId === activeArtifactId;
-          return (
-            <div
-              key={artId}
-              className={`artifact-nav-item ${isActive ? 'active' : ''}`}
-              onClick={() => setActiveArtifactId(artId)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                {getArtifactIcon(art.type)}
-                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whitespace: 'nowrap' }}>
-                  {art.name}
-                </span>
+        {artifacts.length === 0 ? (
+          <div style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--color-fg-muted)', fontSize: '12px' }}>
+            No artifacts yet.<br/>
+            <span style={{ fontSize: '11px', color: 'var(--color-fg-subtle)' }}>Import or create one above</span>
+          </div>
+        ) : (
+          artifacts.map((art) => {
+            const artId = art._id || art.id;
+            const isActive = artId === activeArtifactId;
+            return (
+              <div
+                key={artId}
+                className={`artifact-nav-item ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveArtifactId(artId)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                  {getArtifactIcon(art.type)}
+                  <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whitespace: 'nowrap' }}>
+                    {art.name}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
 
       {/* 4. Current Branch & User Footer */}
@@ -118,10 +136,25 @@ export default function Sidebar({
           <span>Branch: <strong style={{ color: 'var(--color-fg-default)' }}>{currentBranch}</strong></span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--color-fg-default)' }}>
-          <User size={14} />
-          <span>{currentUser?.name || 'Mouli'}</span>
-          <span style={{ fontSize: '10px', color: 'var(--color-fg-subtle)', marginLeft: 'auto' }}>Collaborator</span>
+        <div 
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--color-fg-default)', cursor: 'pointer', padding: '4px 6px', borderRadius: '6px', transition: 'background 0.15s' }}
+          onClick={() => {
+            const newName = window.prompt('Enter your name for research commit attribution & presence:', currentUser?.name || '');
+            if (newName && newName.trim()) {
+              if (onUpdateUser) onUpdateUser({ ...currentUser, name: newName.trim() });
+            }
+          }}
+          title="Click to change your collaborator name"
+        >
+          <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: currentUser?.avatarBg || '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#fff', fontWeight: 600, flexShrink: 0 }}>
+            {(currentUser?.name || 'R').charAt(0).toUpperCase()}
+          </div>
+          <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '100px' }}>
+            {currentUser?.name || 'Researcher'}
+          </span>
+          <span style={{ fontSize: '10px', color: 'var(--color-accent-fg)', marginLeft: 'auto', border: '1px solid var(--color-border-default)', padding: '1px 5px', borderRadius: '4px' }}>
+            Edit
+          </span>
         </div>
       </div>
     </aside>

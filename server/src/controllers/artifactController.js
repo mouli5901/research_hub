@@ -21,14 +21,16 @@ export const createArtifact = async (req, res) => {
     }
 
     const branchName = branch || 'main';
-    const authorName = author || 'Mouli';
+    const authorName = author || 'Anonymous';
 
     // 1. Create Artifact
     const artifact = await Artifact.create({
       name,
       type: type || 'markdown',
       description: description || '',
-      defaultBranch: branchName
+      defaultBranch: branchName,
+      author: authorName,
+      userId: userId || ''
     });
 
     // 2. Create Initial Commit
@@ -40,6 +42,7 @@ export const createArtifact = async (req, res) => {
       branch: branchName,
       message: message || 'Initial research import',
       author: authorName,
+      userId: userId || '',
       timestamp: new Date()
     });
 
@@ -47,7 +50,8 @@ export const createArtifact = async (req, res) => {
     const initialBranch = await Branch.create({
       artifactId: artifact._id,
       name: branchName,
-      headCommit: commit._id
+      headCommit: commit._id,
+      createdBy: authorName
     });
 
     // 4. Index content into Chunk collection for vector search
@@ -68,36 +72,12 @@ export const createArtifact = async (req, res) => {
 // GET /api/artifacts
 export const getArtifacts = async (req, res) => {
   try {
-    let artifacts = await Artifact.find().sort({ updatedAt: -1 });
-    
-    // Auto-seed initial research artifact if database is empty
-    if (artifacts.length === 0) {
-      const artifact = await Artifact.create({
-        name: 'DeepSeek_R1_Architectural_Synthesis.md',
-        type: 'markdown',
-        description: 'Research synthesis on reasoning models and semantic retrieval strategies.',
-        defaultBranch: 'main'
-      });
-
-      const commit = await Commit.create({
-        artifactId: artifact._id,
-        content: `# DeepSeek-R1 Architecture & Semantic Retrieval Benchmark\n\n## 1. Abstract\nThis document outlines our research on low-cost reasoning models and semantic retrieval strategies for scientific corpora.\n\n## 2. Research Hypothesis & Problem Statement\nThe system uses keyword-based retrieval.\n\n## 3. Empirical Evaluation & Accuracy Metrics\n- Baseline Accuracy: 74% precision using TF-IDF\n- Experimental Accuracy: The model achieved 82% accuracy.`,
-        parentCommit: null,
-        branch: 'main',
-        message: 'Initial research import',
-        author: 'Mouli',
-        timestamp: new Date()
-      });
-
-      await Branch.create({
-        artifactId: artifact._id,
-        name: 'main',
-        headCommit: commit._id
-      });
-
-      artifacts = [artifact];
+    const { userId } = req.query;
+    const filter = {};
+    if (userId) {
+      filter.$or = [{ userId }, { userId: '' }, { userId: { $exists: false } }];
     }
-
+    const artifacts = await Artifact.find(filter).sort({ updatedAt: -1 });
     return res.json(artifacts);
   } catch (error) {
     console.error('Error fetching artifacts:', error);
@@ -129,7 +109,7 @@ export const getArtifactById = async (req, res) => {
 export const createCommit = async (req, res) => {
   try {
     const { id: artifactId } = req.params;
-    const { content, message, branch, author, parentCommit, expectedHeadCommit } = req.body;
+    const { content, message, branch, author, userId, parentCommit, expectedHeadCommit } = req.body;
 
     if (!content || !message) {
       return res.status(400).json({ error: 'Commit content and message are required.' });
@@ -141,7 +121,7 @@ export const createCommit = async (req, res) => {
     }
 
     const targetBranchName = branch || artifact.defaultBranch || 'main';
-    const authorName = author || 'Mouli';
+    const authorName = author || 'Anonymous';
 
     // Find existing branch to get head commit if parentCommit is not explicitly passed
     let targetBranch = await Branch.findOne({ artifactId, name: targetBranchName }).populate('headCommit');
@@ -172,6 +152,7 @@ export const createCommit = async (req, res) => {
       branch: targetBranchName,
       message,
       author: authorName,
+      userId: userId || '',
       timestamp: new Date()
     });
 
@@ -402,7 +383,7 @@ export const askAI = async (req, res) => {
 export const createBranch = async (req, res) => {
   try {
     const { id: artifactId } = req.params;
-    const { name, fromBranch, headCommit } = req.body;
+    const { name, fromBranch, headCommit, author } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Branch name is required.' });
@@ -436,7 +417,8 @@ export const createBranch = async (req, res) => {
     const newBranch = await Branch.create({
       artifactId,
       name,
-      headCommit: targetHeadCommitId
+      headCommit: targetHeadCommitId,
+      createdBy: author || 'Anonymous'
     });
 
     return res.status(201).json({

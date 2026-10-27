@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, FileText, MessageSquare, File, FileCode, UploadCloud, CheckCircle, Info, RefreshCw, AlertCircle } from 'lucide-react';
 
-export default function ImportModal({ isOpen, onClose, onImportArtifact }) {
+export default function ImportModal({ isOpen, onClose, onImportArtifact, currentUser }) {
   const [selectedType, setSelectedType] = useState('markdown');
   const [artifactName, setArtifactName] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -64,13 +64,17 @@ export default function ImportModal({ isOpen, onClose, onImportArtifact }) {
         formData.append('file', selectedFile);
         formData.append('name', finalName);
         formData.append('type', selectedType);
+        if (currentUser?.name) formData.append('author', currentUser.name);
+        if (currentUser?.id) formData.append('userId', currentUser.id);
         payload = formData;
       } else {
         const finalContent = pastedText.trim() || currentTypeObj.defaultText;
         payload = {
           name: finalName,
           type: selectedType,
-          content: finalContent
+          content: finalContent,
+          author: currentUser?.name || 'Anonymous',
+          userId: currentUser?.id || ''
         };
       }
 
