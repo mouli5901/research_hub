@@ -1,14 +1,48 @@
 # ResearchHub — Git for Research
 
-A version-control and collaboration platform built for research artifacts — documents, LLM chat exports, and PDFs — with semantic diffing, branching/merge, live presence, and AI-powered retrieval.
+[Insert Video Demo Link Here]
 
-> **Hackathon Submission** — Screen Out 2026
+A version-control and collaboration platform built for research artifacts — documents, LLM chat exports, and PDFs — with semantic diffing, branching, real-time live presence, and AI-powered retrieval.
 
 ---
 
-## Architecture Overview
+## 🌟 Key Features
 
-```
+- **Multi-Format Ingestion:** Upload or paste content from Markdown, Plaintext, ChatGPT/Claude JSON exports, or text-extractable PDFs.
+- **Advanced Version Control:**
+  - Git-like branch management (create, switch, merge).
+  - Sentence-level semantic diffing.
+  - Conflict detection and three-way merging.
+- **Concurrent Context Layer:**
+  - Real-time live presence via Socket.IO.
+  - "Changes since I last looked" indicator banner.
+  - Stale-version conflict alert (HTTP 409) preventing silent data clobbering.
+- **AI-Powered Retrieval (RAG):**
+  - Text chunking (~400 characters) and vector embeddings.
+  - "Ask AI" feature providing grounded answers with provenance citations to specific artifact commits and branches.
+  - Hybrid vector and keyword search.
+
+---
+
+## 🛠 Technology Stack
+
+### Frontend
+- **React (Vite):** Fast, modern UI framework.
+- **Lucide React:** Iconography.
+- **Socket.IO Client:** Real-time presence updates.
+
+### Backend
+- **Express.js:** Lightweight API server framework.
+- **Socket.IO:** Real-time, bi-directional communication.
+- **Mongoose / MongoDB Atlas:** Document database for storing artifacts, commits, branches, and chunked vector embeddings.
+- **Multer:** Multipart file upload handling.
+- **@google/genai / OpenAI API (Optional via Env):** Vector embeddings and LLM integrations.
+
+---
+
+## 🏗 Architecture & Data Flow
+
+```text
 ┌─────────────────────────────────────────────────────┐
 │                   React (Vite)                      │
 │  Sidebar │ WorkspaceHeader │ Editor │ VersionHistory│
@@ -35,191 +69,122 @@ A version-control and collaboration platform built for research artifacts — do
          └───────────────────────────┘
 ```
 
-**Stack:** React 18 + Vite · Express.js · MongoDB (Mongoose) · Socket.IO · OpenAI Embeddings (configurable)
+1. **Ingestion Flow:** User uploads a file. The Backend `ingestionService` parses and normalizes the text. The system creates an `Artifact`, an initial `Commit`, and a default `Branch`.
+2. **Versioning Flow:** Edits generate new Commits on specific Branches. The semantic diff compares text, while the 3-way merge service detects conflicts using Lowest Common Ancestor (LCA) algorithms.
+3. **Retrieval Flow:** Commits are chunked and embedded via `embeddingService`. The `ragService` queries these embeddings using cosine similarity to answer questions with verifiable provenance.
 
 ---
 
-## Four Core Pillars
+## 📂 Folder Structure
 
-### A. Ingestion Layer
-
-| Feature | Status |
-|---------|--------|
-| Markdown / plaintext file upload | YES |
-| ChatGPT JSON export parsing | YES |
-| Claude JSON/MD export parsing | YES |
-| Text-extractable PDF ingestion | YES |
-| Paste raw content directly | YES |
-| Auto-create Artifact + initial Commit + Branch | YES |
-| Auto-chunk & embed on ingest | YES |
-
-**Backend:** `server/src/services/ingestionService.js` — normalizes each format into clean markdown.  
-**API:** `POST /api/artifacts/ingest` (multipart file or JSON body).  
-**Frontend:** `ImportModal.jsx` — type selector cards, drag-and-drop file upload, paste fallback.
-
-### B. Versioning Engine
-
-| Feature | Status |
-|---------|--------|
-| Commit DAG with parent pointers | YES |
-| Semantic sentence-level diff | YES |
-| Branch create / switch | YES |
-| 3-way merge with common ancestor detection | YES |
-| Conflict detection (both sides modify same sentence) | YES |
-| Conflict resolution (Keep Main / Keep Source / Manual) | YES |
-| Stale-version protection (HTTP 409) | YES |
-
-**Diff:** `GET /api/artifacts/:id/diff` — sentence tokenization, Levenshtein similarity scoring, structured blocks (added/removed/modified/unchanged).  
-**Merge:** `server/src/services/mergeService.js` — walks `parentCommit` chain to find LCA, performs 3-way sentence merge.  
-**Frontend:** `DiffViewer.jsx` (green/red code rows), `MergeConflict.jsx` (PR-style mergeability box).
-
-### C. Concurrent Context Layer
-
-| Feature | Status |
-|---------|--------|
-| Socket.IO live presence (who is viewing/editing) | YES |
-| Mock user identities (no auth) | YES |
-| "Changes since I last looked" indicator banner | YES |
-| Stale-version conflict alert (prevent silent clobber) | YES |
-| Pull Latest Commit button | YES |
-
-**Socket:** `server/src/services/socketService.js` — rooms per `artifact:<id>`, broadcasts presence updates.  
-**API:** `GET /api/artifacts/:id/changes-since?lastSeenCommit=...&branch=...`  
-**Frontend:** `Presence.jsx` (avatar dots), Workspace banners for new changes and stale conflicts.
-
-### D. Retrieval / Query Surface
-
-| Feature | Status |
-|---------|--------|
-| Chunk documents into ~400-char segments | YES |
-| Generate embeddings (OpenAI or 128-dim fallback) | YES |
-| Hybrid vector + keyword search | YES |
-| Cross-artifact-type search results | YES |
-| Ask AI with version-aware RAG | YES |
-| Provenance citations (artifact name, type, commit hash) | YES |
-
-**Embedding:** `server/src/services/embeddingService.js` — configurable via `OPENAI_API_KEY` env var, falls back to deterministic 128-dim normalized vectors.  
-**Search:** `GET /api/artifacts/search?q=...&type=...`  
-**Ask AI:** `POST /api/artifacts/ask-ai` → retrieves context chunks → sends to LLM → returns grounded answer + provenance.  
-**Frontend:** `SearchResults.jsx` (command-palette modal), `AskAIModal.jsx` (Copilot-style Q&A with citations).
+```text
+git-for-research/
+├── client/                      # Frontend Application
+│   ├── src/
+│   │   ├── components/          # Reusable UI elements (Editor, Modals, DiffViewer)
+│   │   ├── pages/               # Main pages (e.g., Workspace.jsx)
+│   │   └── services/            # API and Socket.IO client instances
+│   ├── vite.config.js
+│   └── package.json
+├── server/                      # Backend Application
+│   ├── src/
+│   │   ├── controllers/         # Request handling logic (Artifact, Ingest)
+│   │   ├── models/              # Mongoose schemas (Artifact, Branch, Chunk, Commit)
+│   │   ├── routes/              # Express API route definitions
+│   │   ├── services/            # Core logic (Embeddings, Merge, RAG, Socket)
+│   │   └── server.js            # Express & Socket.IO server initialization
+│   ├── .env.example             # Template for required environment variables
+│   └── package.json
+├── package.json                 # Monorepo root configuration
+└── vercel.json                  # Deployment configuration
+```
 
 ---
 
-
-###  Completed
-- GitHub Primer dark theme UI across all components
-- 14/14 automated E2E audit tests passing
-- Sentence-level semantic diff (deterministic, no LLM)
-- 3-way merge with real conflict detection
-- Socket.IO real-time presence
-- Stale-version protection (HTTP 409 on outdated commits)
-- RAG-based Ask AI with provenance citations
-- Markdown, ChatGPT, Claude, and PDF ingestion
-
-###  Limitations / Not Implemented
-- No real authentication (mock users only)
-- No OCR for image-based PDFs
-- No CRDT / real-time collaborative editing
-- No codebase ingestion (stretch goal)
-- MongoDB Atlas Vector Search not configured (uses fallback cosine similarity)
-- No WebSocket-based live cursor tracking
-
----
-
-## Quick Start
+## 🚀 Installation & Setup
 
 ### Prerequisites
-- Node.js ≥ 18
-- MongoDB Atlas connection string (or local MongoDB)
+- Node.js (v18+ recommended)
+- MongoDB Cluster (Local or Atlas Network Access set to 0.0.0.0/0 for connection)
 
-### Environment Variables
-
-Create `server/.env`:
-```
-MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/git-for-research
-PORT=5000
-OPENAI_API_KEY=sk-...          # Optional: for real embeddings & Ask AI
-OPENAI_MODEL=gpt-4o-mini       # Optional: LLM model for RAG
-```
-
-### Install & Run
+### 1. Environment Configuration
+Navigate to the backend directory and create a `.env` file based on `.env.example`:
 
 ```bash
-# 1. Install backend dependencies
 cd server
-npm install
-
-# 2. Start the backend server
-node src/server.js
-# → Running on http://localhost:5000
-
-# 3. In a new terminal, install frontend dependencies
-cd client
-npm install
-
-# 4. Start the frontend dev server
-npm run dev
-# → Running on http://localhost:5173
+cp .env.example .env
+```
+Ensure you configure your MongoDB connection string in the `server/.env` file:
+```env
+PORT=5000
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster0.cuchzss.mongodb.net/?appName=Cluster0
 ```
 
+*(Note: Additional environment variables like `OPENAI_API_KEY` or `GEMINI_API_KEY` can be used by the codebase to enable real LLMs; if omitted, the app falls back to local deterministic embeddings and context synthesis).*
 
-## What We'd Build Next
+### 2. Run the Backend Server
+```bash
+cd server
+npm install
+npm run dev     # OR npm start
+```
+The server will start on `http://localhost:5000`.
 
-With more time, we would add **real-time collaborative editing via CRDTs** (Yjs) so multiple researchers can edit simultaneously with cursor presence; **MongoDB Atlas Vector Search indexes** for production-scale semantic retrieval; **codebase ingestion** with AST-aware chunking for Jupyter notebooks and Python scripts; **OAuth authentication** with team workspaces; and a **visual commit DAG graph** rendered with D3.js to show branching history the way GitHub's network graph does.
+### 3. Run the Frontend Client
+Open a new terminal window:
+```bash
+cd client
+npm install
+npm run dev
+```
+The client will be available at `http://localhost:5173`.
 
 ---
 
-## Project Structure
+## 📚 API Documentation
 
-```
-git-for-research/
-├── client/                    # React + Vite frontend
-│   ├── src/
-│   │   ├── components/        # UI components (Primer-styled)
-│   │   │   ├── ArtifactEditor.jsx
-│   │   │   ├── AskAIModal.jsx
-│   │   │   ├── BranchSelector.jsx
-│   │   │   ├── CommitModal.jsx
-│   │   │   ├── DiffViewer.jsx
-│   │   │   ├── ImportModal.jsx
-│   │   │   ├── MergeConflict.jsx
-│   │   │   ├── Presence.jsx
-│   │   │   ├── SearchResults.jsx
-│   │   │   ├── Sidebar.jsx
-│   │   │   ├── VersionHistory.jsx
-│   │   │   └── WorkspaceHeader.jsx
-│   │   ├── pages/
-│   │   │   └── Workspace.jsx  # Main orchestrator page
-│   │   ├── services/
-│   │   │   ├── api.js         # REST API client
-│   │   │   └── socket.js      # Socket.IO client
-│   │   ├── data/
-│   │   │   └── mockData.js    # Fallback mock data
-│   │   ├── index.css          # GitHub Primer dark theme
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   └── package.json
-├── server/                    # Express.js backend
-│   ├── src/
-│   │   ├── controllers/
-│   │   │   ├── artifactController.js
-│   │   │   └── ingestController.js
-│   │   ├── models/
-│   │   │   ├── Artifact.js
-│   │   │   ├── Branch.js
-│   │   │   ├── Chunk.js
-│   │   │   └── Commit.js
-│   │   ├── routes/
-│   │   │   └── artifactRoutes.js
-│   │   ├── services/
-│   │   │   ├── embeddingService.js
-│   │   │   ├── ingestionService.js
-│   │   │   ├── mergeService.js
-│   │   │   ├── ragService.js
-│   │   │   └── socketService.js
-│   │   └── server.js
-│   └── package.json
-└── README.md
+Base API path: `/api/artifacts`
+
+| Method | Endpoint | Description | Request Body / Params |
+|--------|----------|-------------|-----------------------|
+| `POST` | `/ingest` | Upload a file or paste text to create an artifact. | `Multipart form data` (file, name, type, content, branch, author) |
+| `GET`  | `/search` | Search indexed artifacts and chunks. | Query: `q` (search term), `type` (optional artifact type filter) |
+| `POST` | `/ask-ai` | Ask a question utilizing version-aware RAG over the artifact corpus. | JSON: `{ "question": "Your question here" }` |
+| `POST` | `/` | Create an empty artifact manually. | JSON: `{ "name", "type", "description", "defaultBranch", "author" }` |
+| `GET`  | `/` | Retrieve all artifacts. | None |
+| `GET`  | `/:id` | Get details for a specific artifact by ID. | Path: `id` |
+| `GET`  | `/:id/changes-since`| Get new commits since a specific timestamp/commit. | Query: `lastSeenCommit`, `branch` |
+| `GET`  | `/:id/diff` | Get semantic diff between two commits or branches. | Query: `baseCommit`, `compareCommit`, `baseBranch`, `compareBranch` |
+| `POST` | `/:id/merge` | 3-way merge `sourceBranch` into `targetBranch`. | JSON: `{ "targetBranch", "sourceBranch", "resolvedContent" (if resolving conflict), "resolutionStrategy" }` |
+| `POST` | `/:id/commits`| Create a new commit (version) for an artifact. | JSON: `{ "content", "parentCommit", "branch", "message", "author" }` |
+| `GET`  | `/:id/commits`| Get commit history for an artifact. | Path: `id`, Query: `branch` (optional) |
+| `POST` | `/:id/branches`| Create a new branch. | JSON: `{ "name", "fromBranch", "headCommit", "author" }` |
+| `GET`  | `/:id/branches`| List all branches for an artifact. | Path: `id` |
+
+---
+
+## 🧪 Testing
+
+Frontend unit and UI tests are configured using Vitest.
+```bash
+cd client
+npx vitest run
 ```
 
+---
 
+## 🌩 Deployment
+
+The project is configured for deployment via Vercel.
+- The root `package.json` triggers `npm run build` targeting the `client` directory.
+- `vercel.json` rewrites API requests (`/api/*` and `/socket.io/*`) to the backend serverless functions, serving the React frontend for all other routes.
+
+Make sure to add the necessary Environment Variables (like `MONGODB_URI`) in your Vercel project settings.
+
+---
+
+## ⚠️ Common Issues & Troubleshooting
+
+- **Database Connection Failed (Status 503):** Verify that the `MONGODB_URI` environment variable is correct and that MongoDB Atlas Network Access allows connections from your current IP (or `0.0.0.0/0` during development).
+- **Stale Commit Conflicts (Status 409):** You attempted to push a commit to a branch that has moved forward since you last loaded it. Use the UI to pull the latest changes before submitting.
+- **Port Conflicts:** If `5000` or `5173` is in use, check your running processes or adjust the port configurations in `.env` and client network request files.
