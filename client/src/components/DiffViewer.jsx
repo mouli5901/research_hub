@@ -135,6 +135,20 @@ export default function DiffViewer({
                     </tr>
                   );
                 }
+                if (block.type === 'modified') {
+                  return (
+                    <React.Fragment key={idx}>
+                      <tr className="blob-code-deletion">
+                        <td style={{ width: '40px', padding: '4px 8px', color: 'var(--color-fg-subtle)', textAlign: 'right', borderRight: '1px solid var(--color-border-default)', userSelect: 'none' }}>-</td>
+                        <td style={{ padding: '4px 12px', whiteSpace: 'pre-wrap' }}>{block.baseContent}</td>
+                      </tr>
+                      <tr className="blob-code-addition">
+                        <td style={{ width: '40px', padding: '4px 8px', color: 'var(--color-fg-subtle)', textAlign: 'right', borderRight: '1px solid var(--color-border-default)', userSelect: 'none' }}>+</td>
+                        <td style={{ padding: '4px 12px', whiteSpace: 'pre-wrap' }}>{block.compareContent}</td>
+                      </tr>
+                    </React.Fragment>
+                  );
+                }
                 return (
                   <tr key={idx}>
                     <td style={{ width: '40px', padding: '4px 8px', color: 'var(--color-fg-subtle)', textAlign: 'right', borderRight: '1px solid var(--color-border-default)', userSelect: 'none' }}> </td>
