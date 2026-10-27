@@ -41,6 +41,8 @@ import {
   MOCK_DIFF_DATA
 } from '../data/mockData';
 
+import { computeSemanticDiff } from '../services/diffService';
+
 export default function Workspace() {
   // Navigation & View States
   const [activeNav, setActiveNav] = useState('all-docs');
@@ -287,7 +289,35 @@ export default function Workspace() {
           compareBranch: currentBranch
         });
       } catch (err) {
-        result = MOCK_DIFF_DATA;
+        // Fallback to local diff computation
+        const baseCommitObj = allCommits.find(c => (c._id || c.id) === baseC);
+        const compareCommitObj = allCommits.find(c => (c._id || c.id) === compareC);
+
+        const baseText = baseCommitObj ? baseCommitObj.content : '';
+        const compareText = compareCommitObj ? compareCommitObj.content : '';
+
+        const diffResult = computeSemanticDiff(baseText, compareText);
+
+        result = {
+          artifactId: activeArtifactId,
+          fileName: activeArtifact?.name || 'Document',
+          baseBranch: baseCommitObj?.branch || 'main',
+          compareBranch: compareCommitObj?.branch || currentBranch,
+          baseCommit: baseCommitObj ? {
+            _id: baseCommitObj._id || baseCommitObj.id,
+            shortHash: (baseCommitObj._id || baseCommitObj.id).toString().substring((baseCommitObj._id || baseCommitObj.id).toString().length - 7),
+            message: baseCommitObj.message,
+            branch: baseCommitObj.branch
+          } : null,
+          compareCommit: compareCommitObj ? {
+            _id: compareCommitObj._id || compareCommitObj.id,
+            shortHash: (compareCommitObj._id || compareCommitObj.id).toString().substring((compareCommitObj._id || compareCommitObj.id).toString().length - 7),
+            message: compareCommitObj.message,
+            branch: compareCommitObj.branch
+          } : null,
+          summary: diffResult.summary,
+          blocks: diffResult.blocks
+        };
       }
 
       setDiffData(result || MOCK_DIFF_DATA);
@@ -299,7 +329,7 @@ export default function Workspace() {
     } finally {
       setIsLoadingDiff(false);
     }
-  }, [activeArtifactId, activeView, baseCommitId, compareCommitId, currentBranch, commits]);
+  }, [activeArtifactId, activeView, baseCommitId, compareCommitId, currentBranch, commits, activeArtifact]);
 
   useEffect(() => {
     loadDiffData();
